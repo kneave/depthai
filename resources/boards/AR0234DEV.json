@@ -6,12 +6,12 @@
         "cameras":{
             "CAM_C": {
                 "name": "right",
-                "hfov": 140,
+                "hfov": 71.86,
                 "type": "color",
                 "extrinsics": {
                     "to_cam": "CAM_B",
                     "specTranslation": {
-                        "x": -7.5,
+                        "x": 5.7,
                         "y": 0,
                         "z": 0
                     },
@@ -24,13 +24,13 @@
             },
             "CAM_B": {
                 "name": "left",
-                "hfov": 140,
+                "hfov": 71.86,
                 "type": "color",
                 "extrinsics": {
                     "to_cam": "CAM_A",
                     "specTranslation": {
                         "x": 0,
-                        "y": -3.5,
+                        "y": 3.25,
                         "z": 0
                     },
                     "rotation":{
@@ -42,7 +42,7 @@
             },
             "CAM_A": {
                 "name": "below",
-                "hfov": 140,
+                "hfov": 68.7938,
                 "type": "color"
             }
 

@@ -1,3 +1,0 @@
-[submodule "depthai_sdk/src/depthai_sdk/components/integrations/depthai_pipeline_graph"]
-	path = depthai_sdk/src/depthai_sdk/components/integrations/depthai_pipeline_graph
-	url = https://github.com/luxonis/depthai_pipeline_graph

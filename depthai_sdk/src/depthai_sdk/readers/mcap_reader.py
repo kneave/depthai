@@ -1,30 +1,25 @@
-from pathlib import Path
-from typing import List, Tuple
-
+import array
+from mcap.mcap0.stream_reader import StreamReader
+from mcap.mcap0.reader import make_reader
+from mcap_ros1.decoder import Decoder
+from depthai_sdk import PreviewDecoder
 import cv2
 import numpy as np
-from mcap.mcap0.reader import make_reader
-from mcap.mcap0.stream_reader import StreamReader
-from mcap_ros1.decoder import Decoder
 
-from depthai_sdk.previews import PreviewDecoder
-from depthai_sdk.readers.abstract_reader import AbstractReader
-
+from .abstract_reader import AbstractReader
 
 class McapReader(AbstractReader):
     """
     Reads all saved streams from .mcap recording.
     Supported ROS messages: Image (depth), CompressedImage (left, right, color, disparity)
     """
-
-    def __init__(self, folder: Path) -> None:
+    _readFrames = dict()
+    def __init__(self, source: str) -> None:
         # Get available topics
         with open(source, "rb") as file:
             reader = make_reader(file)
             channels = reader.get_summary().channels
             self._topics = [c.topic.split('/')[0] for _, c in channels.items()]
-
-        self._readFrames = dict()
 
         # Init msg array
         for topic in self._topics:
@@ -34,7 +29,6 @@ class McapReader(AbstractReader):
         decoder = Decoder(StreamReader(str(source)))
         self.msgs = decoder.messages
         # Prepare initial frames so we can get frame size
-
         self._prepareFrames()
 
     def read(self):
@@ -50,7 +44,7 @@ class McapReader(AbstractReader):
         to get one of each buffered frame.
         """
         while not self._framesReady():
-            topic, _, msg = next(self.msgs)
+            topic, _, msg =  next(self.msgs)
             name = topic.split('/')[0]
             self._readFrames[name].append(self._getCvFrame(msg, name))
 
@@ -63,7 +57,7 @@ class McapReader(AbstractReader):
         if 'CompressedImage' in msgType:
             if name == 'color':
                 return PreviewDecoder.jpegDecode(data, cv2.IMREAD_COLOR)
-            else:  # left, right, disparity
+            else: # left, right, disparity 
                 return PreviewDecoder.jpegDecode(data, cv2.IMREAD_GRAYSCALE)
         elif 'Image' in msgType:
             if msg.encoding == 'mono16':
@@ -73,6 +67,7 @@ class McapReader(AbstractReader):
         else:
             raise Exception('Only CompressedImage and Image ROS messages are currently supported.')
 
+    
     def _framesReady(self):
         """
         Check if there is at least one frame from each available stream.
@@ -89,14 +84,14 @@ class McapReader(AbstractReader):
         for name, arr in self._readFrames.items():
             ret[name] = arr.pop(0)
         return ret
-
-    def getStreams(self) -> List[str]:
+        
+    def getStreams(self) -> array:
         """
         Get available topics
         """
         return [name for name in self._topics]
 
-    def getShape(self, name: str) -> Tuple[int, int]:
+    def getShape(self, name: str) -> tuple:
         frame = self._readFrames[name][0]
         return (frame.shape[1], frame.shape[0])
 

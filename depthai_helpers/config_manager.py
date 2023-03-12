@@ -141,7 +141,10 @@ class ConfigManager:
 
         self.args.show.append(Previews.color.name)
         if self.useDepth:
-            self.args.show.append(Previews.disparityColor.name)
+            if self.lowBandwidth:
+                self.args.show.append(Previews.disparityColor.name)
+            else:
+                self.args.show.append(Previews.depth.name)
 
         if self.args.guiType == "qt":
             if self.useNN:
