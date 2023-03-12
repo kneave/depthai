@@ -8,7 +8,9 @@ from argparse import ArgumentParser
 from pathlib import Path
 import time
 from datetime import datetime, timedelta
-from collections import deque 
+from collections import deque
+from scipy.spatial.transform import Rotation
+import traceback
 
 import cv2
 from cv2 import resize
@@ -23,57 +25,75 @@ debug = False
 red = (255, 0, 0)
 green = (0, 255, 0)
 
-stringToCam = {
-                # 'RGB': dai.CameraBoardSocket.RGB,
-                # 'LEFT': dai.CameraBoardSocket.LEFT,
-                # 'RIGHT': dai.CameraBoardSocket.RIGHT,
-                # 'AUTO': dai.CameraBoardSocket.AUTO,
-                # 'CAM_A' : dai.CameraBoardSocket.RGB,
-                # 'CAM_B' : dai.CameraBoardSocket.LEFT,
-                # 'CAM_C' : dai.CameraBoardSocket.CAM_C,
-                'RGB'   : dai.CameraBoardSocket.CAM_A,
-                'LEFT'  : dai.CameraBoardSocket.CAM_B,
-                'RIGHT' : dai.CameraBoardSocket.CAM_C,
-                'CAM_A' : dai.CameraBoardSocket.CAM_A,
-                'CAM_B' : dai.CameraBoardSocket.CAM_B,
-                'CAM_C' : dai.CameraBoardSocket.CAM_C,
-                'CAM_D' : dai.CameraBoardSocket.CAM_D,
-                'CAM_E' : dai.CameraBoardSocket.CAM_E,
-                'CAM_F' : dai.CameraBoardSocket.CAM_F,
-                'CAM_G' : dai.CameraBoardSocket.CAM_G,
-                'CAM_H' : dai.CameraBoardSocket.CAM_H
-                }
+if hasattr(dai.CameraBoardSocket, 'CAM_A'):
+    stringToCam = {
+                    'RGB'   : dai.CameraBoardSocket.CAM_A,
+                    'LEFT'  : dai.CameraBoardSocket.CAM_B,
+                    'RIGHT' : dai.CameraBoardSocket.CAM_C,
+                    'CAM_A' : dai.CameraBoardSocket.CAM_A,
+                    'CAM_B' : dai.CameraBoardSocket.CAM_B,
+                    'CAM_C' : dai.CameraBoardSocket.CAM_C,
+                    'CAM_D' : dai.CameraBoardSocket.CAM_D,
+                    'CAM_E' : dai.CameraBoardSocket.CAM_E,
+                    'CAM_F' : dai.CameraBoardSocket.CAM_F,
+                    'CAM_G' : dai.CameraBoardSocket.CAM_G,
+                    'CAM_H' : dai.CameraBoardSocket.CAM_H
+                    }
+    camToString = {
+                    dai.CameraBoardSocket.CAM_A : 'RGB'  ,
+                    dai.CameraBoardSocket.CAM_B : 'LEFT' ,
+                    dai.CameraBoardSocket.CAM_C : 'RIGHT',
+                    dai.CameraBoardSocket.CAM_A : 'CAM_A',
+                    dai.CameraBoardSocket.CAM_B : 'CAM_B',
+                    dai.CameraBoardSocket.CAM_C : 'CAM_C',
+                    dai.CameraBoardSocket.CAM_D : 'CAM_D',
+                    dai.CameraBoardSocket.CAM_E : 'CAM_E',
+                    dai.CameraBoardSocket.CAM_F : 'CAM_F',
+                    dai.CameraBoardSocket.CAM_G : 'CAM_G',
+                    dai.CameraBoardSocket.CAM_H : 'CAM_H'
+                    }
+else:
+    stringToCam = {
+                    'RGB': dai.CameraBoardSocket.RGB,
+                    'LEFT': dai.CameraBoardSocket.LEFT,
+                    'RIGHT': dai.CameraBoardSocket.RIGHT,
+                    'AUTO': dai.CameraBoardSocket.AUTO,
+                    'CAM_A' : dai.CameraBoardSocket.RGB,
+                    'CAM_B' : dai.CameraBoardSocket.LEFT,
+                    'CAM_C' : dai.CameraBoardSocket.RIGHT
+                   }
 
-CamToString = {
-                # dai.CameraBoardSocket.RGB : 'RGB'  ,
-                # dai.CameraBoardSocket.LEFT : 'LEFT' ,
-                # dai.CameraBoardSocket.RIGHT : 'RIGHT',
-                # dai.CameraBoardSocket.AUTO : 'AUTO'
-                dai.CameraBoardSocket.CAM_A : 'RGB'  ,
-                dai.CameraBoardSocket.CAM_B : 'LEFT' ,
-                dai.CameraBoardSocket.CAM_C : 'RIGHT',
-                dai.CameraBoardSocket.CAM_A : 'CAM_A',
-                dai.CameraBoardSocket.CAM_B : 'CAM_B',
-                dai.CameraBoardSocket.CAM_C : 'CAM_C',
-                dai.CameraBoardSocket.CAM_D : 'CAM_D',
-                dai.CameraBoardSocket.CAM_E : 'CAM_E',
-                dai.CameraBoardSocket.CAM_F : 'CAM_F',
-                dai.CameraBoardSocket.CAM_G : 'CAM_G',
-                dai.CameraBoardSocket.CAM_H : 'CAM_H'
-                }
+    camToString = {
+                    # dai.CameraBoardSocket.RGB : 'RGB'  ,
+                    # dai.CameraBoardSocket.LEFT : 'LEFT' ,
+                    # dai.CameraBoardSocket.RIGHT : 'RIGHT',
+                    # dai.CameraBoardSocket.AUTO : 'AUTO',
+                    dai.CameraBoardSocket.RGB : 'CAM_A',
+                    dai.CameraBoardSocket.LEFT : 'CAM_B',
+                    dai.CameraBoardSocket.RIGHT : 'CAM_C',
+                    }
+
 
 camToMonoRes = {
                 'OV7251' : dai.MonoCameraProperties.SensorResolution.THE_480_P,
                 'OV9*82' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
+                'OV9282' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
+                'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
                 }
 
 camToRgbRes = {
                 'IMX378' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
                 'IMX214' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
                 'OV9*82' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
+                'OV9282' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
+                'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
-                'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P
+                'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
+                'IMX296' : dai.ColorCameraProperties.SensorResolution.THE_1440X1080,
                 }
+
+if hasattr(dai.ColorCameraProperties.SensorResolution, 'THE_1200_P'):
+    camToRgbRes['AR0234'] = dai.ColorCameraProperties.SensorResolution.THE_1200_P
 
 def create_blank(width, height, rgb_color=(0, 0, 0)):
     """Create new image(numpy array) filled with certain color in RGB"""
@@ -95,13 +115,13 @@ def parse_args():
 
     Image capture requires the use of a printed OpenCV charuco calibration target applied to a flat surface(ex: sturdy cardboard).
     Default board size used in this script is 22x16. However you can send a customized one too.
-    When taking photos, ensure enough amount of markers are visible and images are crisp. 
+    When taking photos, ensure enough amount of markers are visible and images are crisp.
     The board does not need to fit within each drawn red polygon shape, but it should mimic the display of the polygon.
 
     If the calibration checkerboard corners cannot be found, the user will be prompted to try that calibration pose again.
 
     The script requires a RMS error < 1.0 to generate a calibration file. If RMS exceeds this threshold, an error is displayed.
-    An average epipolar error of <1.5 is considered to be good, but not required. 
+    An average epipolar error of <1.5 is considered to be good, but not required.
 
     Example usage:
 
@@ -110,13 +130,13 @@ def parse_args():
 
     Only run image processing only with same board setup. Requires a set of saved capture images:
     python3 calibrate.py -s 3.0 -ms 2.5 -brd DM2CAM -m process
-    
+
     Delete all existing images before starting image capture:
     python3 calibrate.py -i delete
     '''
     parser = ArgumentParser(
         epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("-c", "--count", default=1, type=int, required=False,
+    parser.add_argument("-c", "--count", default=3, type=int, required=False,
                         help="Number of images per polygon to capture. Default: 1.")
     parser.add_argument("-s", "--squareSizeCm", type=float, required=True,
                         help="Square size of calibration pattern used in centimeters. Default: 2.0cm.")
@@ -169,7 +189,7 @@ def parse_args():
             raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
     if options.squareSizeCm < 2.2:
         raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
-        
+
     return options
 
 class HostSync:
@@ -198,7 +218,7 @@ class HostSync:
         #         if self.remove(obj['timestamp']):
         #             arr.remove(obj)
         #         else: break
-    
+
     def clearQueues(self):
         print('Clearing Queues...')
         for name, msgList in self.arrays.items():
@@ -212,7 +232,7 @@ class HostSync:
             # print(len(pivotMsgList))
 
             if len(msgList) != self.arraySize:
-                return False 
+                return False
 
         for name, pivotMsgList in self.arrays.items():
             print('len(pivotMsgList)')
@@ -221,7 +241,7 @@ class HostSync:
             while pivotMsgListDuplicate:
                 currPivot = pivotMsgListDuplicate.popleft()
                 synced[name] = currPivot['data']
-                
+
                 for subName, msgList in self.arrays.items():
                     print(f'len of {subName}')
                     print(len(msgList))
@@ -306,9 +326,10 @@ class Main:
         # if self.args.board.upper() == 'OAK-D-LITE':
         #     raise Exception(
         #     "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
-        
+
         self.device = dai.Device()
-        cameraProperties = self.device.getConnectedCameraProperties()
+        cameraProperties = self.device.getConnectedCameraFeatures()
+        print(cameraProperties)
         for properties in cameraProperties:
             for in_cam in self.board_config['cameras'].keys():
                 cam_info = self.board_config['cameras'][in_cam]
@@ -331,7 +352,7 @@ class Main:
         for properties in cameraProperties:
             if properties.sensorName == 'OV7251':
                 raise Exception(
-            "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!") 
+            "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
 
         self.device.startPipeline(pipeline)"""
         # self.left_camera_queue = self.device.getOutputQueue("left", 30, True)
@@ -360,7 +381,7 @@ class Main:
                 if left_corner[0][0] - right_corner[0][0] < 0:
                     return False
         return True
-    
+
     def create_pipeline(self):
         pipeline = dai.Pipeline()
 
@@ -380,10 +401,13 @@ class Main:
             else:
                 cam_node = pipeline.createColorCamera()
                 xout = pipeline.createXLinkOut()
-                
+
                 cam_node.setBoardSocket(stringToCam[cam_id])
                 cam_node.setResolution(camToRgbRes[cam_info['sensorName']])
                 cam_node.setFps(fps)
+                # If AR0234 bring down resolution to 800p
+                if camToRgbRes[cam_info['sensorName']] == 'AR0234':
+                    cam_node.setIspScale(2,3)
 
                 xout.setStreamName(cam_info['name'])
                 cam_node.isp.link(xout.input)
@@ -491,7 +515,7 @@ class Main:
         for attr in ["boardName", "boardRev"]:
             if getattr(data, attr): return False
         return True
-    
+
     def capture_images_sync(self):
         finished = False
         capturing = False
@@ -521,11 +545,11 @@ class Main:
             resizeHeight = 0
             resizeWidth = 0
             for name, imgFrame in currImageList.items():
-                
+
                 # print(f'original Shape of {name} is {imgFrame.shape}' )
                 currImageList[name] = cv2.resize(
                     imgFrame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
-                
+
                 height, width = currImageList[name].shape
 
                 widthRatio = resizeWidth / width
@@ -534,7 +558,7 @@ class Main:
 
                 # if widthRatio > 1.0 and heightRatio > 1.0 and widthRatio < 1.2 and heightRatio < 1.2:
                 #     continue
-                
+
 
                 if (widthRatio > 0.8 and heightRatio > 0.8 and widthRatio <= 1.0 and heightRatio <= 1.0) or (widthRatio > 1.2 and heightRatio > 1.2) or (resizeHeight == 0):
                     resizeWidth = width
@@ -546,27 +570,51 @@ class Main:
                 #     resizeWidth = width
                 # if height > resizeHeight:
                 #     resizeHeight = height
-            
+
             # print(f'Scale Shape  is {resizeWidth}x{resizeHeight}' )
-            
+
             combinedImage = None
             for name, imgFrame in currImageList.items():
                 height, width = imgFrame.shape
                 if width > resizeWidth and height > resizeHeight:
                     imgFrame = cv2.resize(
                     imgFrame, (0, 0), fx= resizeWidth / width, fy= resizeWidth / width)
-                
+
                 # print(f'final_scaledImageSize is {imgFrame.shape}')
                 if self.polygons is None:
                     self.height, self.width = imgFrame.shape
                     print(self.height, self.width)
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
-                
+
+                localPolygon = np.array([self.polygons[self.current_polygon]])
+                print(localPolygon.shape)
+                print(localPolygon)
+                if self.images_captured_polygon == 1:
+                    # perspectiveRotationMatrix = Rotation.from_euler('z', 45, degrees=True).as_matrix()
+                    angle = 30.
+                    theta = (angle/180.) * np.pi
+                    perspectiveRotationMatrix = np.array([[np.cos(theta), -np.sin(theta)],
+                                                        [np.sin(theta),  np.cos(theta)]])
+
+                    localPolygon = np.matmul(localPolygon, perspectiveRotationMatrix).astype(np.int32)
+                    localPolygon[0][:, 1] += abs(localPolygon.min())
+                if self.images_captured_polygon == 2:
+                    # perspectiveRotationMatrix = Rotation.from_euler('z', -45, degrees=True).as_matrix()
+                    angle = -30.
+                    theta = (angle/180.) * np.pi
+                    perspectiveRotationMatrix = np.array([[np.cos(theta), -np.sin(theta)],
+                                                        [np.sin(theta),  np.cos(theta)]])
+                    localPolygon = np.matmul(localPolygon, perspectiveRotationMatrix).astype(np.int32)
+                    localPolygon[0][:, 1] += (height - abs(localPolygon[0][:, 1].max()))
+                    localPolygon[0][:, 0] += abs(localPolygon[0][:, 1].min())
+
+                print(localPolygon)
+                print(localPolygon.shape)
                 cv2.polylines(
-                    imgFrame, np.array([self.polygons[self.current_polygon]]),
+                    imgFrame, localPolygon,
                     True, (0, 0, 255), 4)
-                
+
                 # TODO(Sachin): Add this back with proper alignment
                 # cv2.putText(
                 #     imgFrame,
@@ -582,7 +630,7 @@ class Main:
                     combinedImage = subImage
                 else:
                     combinedImage = np.hstack((combinedImage, subImage))
-            
+
             key = cv2.waitKey(1)
             if key == 27 or key == ord("q"):
                 print("py: Calibration has been interrupted!")
@@ -601,7 +649,7 @@ class Main:
                     start_timer = False
                     capturing = True
                     print('Start capturing...')
-                
+
                 image_shape = combinedImage.shape
                 cv2.putText(combinedImage, str(timer),
                         (image_shape[1]//2, image_shape[0]//2), font,
@@ -617,11 +665,11 @@ class Main:
                 if syncedMsgs == False:
                     for key in self.camera_queue.keys():
                         self.camera_queue[key].getAll()
-                    continue 
+                    continue
                 for name, frameMsg in syncedMsgs.items():
                     tried[name] = self.parse_frame(frameMsg.getCvFrame(), name)
                     allPassed = allPassed and tried[name]
-                
+
                 if allPassed:
                     if not self.images_captured:
                         leftStereo =  self.board_config['cameras'][self.board_config['stereo_config']['left_cam']]['name']
@@ -669,6 +717,7 @@ class Main:
         prev_time = None
         curr_time = None
         self.display_name = "left + right + rgb"
+        last_frame_time = time.time()
         # with self.get_pipeline() as pipeline:
         while not finished:
             current_left  = self.left_camera_queue.tryGet()
@@ -687,8 +736,16 @@ class Main:
                 recent_color = current_color
 
             if recent_left is None or recent_right is None or (recent_color is None and not self.args.disableRgb):
-                print("Continuing...")
+                if time.time() - last_frame_time > 5:
+                    if self.args.disableRgb:
+                        print("Error: Couldn't retrieve left and right frames for more than 5 seconds. Exiting...")
+                    else:
+                        print("Error: Couldn't retrieve left, rigth and color frames for more than 5 seconds. Exiting...")
+                    raise SystemExit(1)
+                cv2.waitKey(1)
                 continue
+
+            last_frame_time = time.time()
 
             recent_frames = [('left', recent_left), ('right', recent_right)]
             if not self.args.disableRgb:
@@ -816,7 +873,7 @@ class Main:
                         finished = True
                         cv2.destroyAllWindows()
                         break
-            
+
             if not self.args.disableRgb:
                 frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
                 combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
@@ -833,7 +890,7 @@ class Main:
                     start_timer = False
                     capturing = True
                     print('Statrt capturing...')
-                
+
                 image_shape = combine_img.shape
                 cv2.putText(combine_img, str(timer),
                         (image_shape[1]//2, image_shape[0]//2), font,
@@ -846,7 +903,7 @@ class Main:
         print("Starting image processing")
         stereo_calib = calibUtils.StereoCalibration()
         dest_path = str(Path('resources').absolute())
-        self.args.cameraMode = 'perspective' # hardcoded for now
+        # self.args.cameraMode = 'perspective' # hardcoded for now
         try:
 
             # stereo_calib = StereoCalibration()
@@ -865,9 +922,13 @@ class Main:
             calibration_handler = self.device.readCalibration()
             try:
                 if self.empty_calibration(calibration_handler):
-                    calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
-            except:
-                pass
+                    calibration_handler.setBoardInfo(self.board_config['name'], self.board_config['revision'])
+            except Exception as e:
+                print('Device closed in exception..' )
+                self.device.close()
+                print(e)
+                print(traceback.format_exc())
+                raise SystemExit(1)
 
             # calibration_handler.set
             error_text = []
@@ -885,7 +946,7 @@ class Main:
                 if cam_info['name'] == 'rgb':
                     reprojection_error_threshold = 3
                 print('Reprojection error threshold -> {}'.format(reprojection_error_threshold))
-                
+
                 if cam_info['reprojection_error'] > reprojection_error_threshold:
                     color = red
                     error_text.append("high Reprojection Error")
@@ -903,13 +964,13 @@ class Main:
                 # log_list.append(self.focusSigma[cam_info['name']])
                 # log_list.append(cam_info['reprojection_error'])
                 # color = green///
-                # epErrorZText 
+                # epErrorZText
                 if 'extrinsics' in cam_info:
 
                     if 'to_cam' in cam_info['extrinsics']:
                         right_cam = result_config['cameras'][cam_info['extrinsics']['to_cam']]['name']
                         left_cam = cam_info['name']
-                        
+
                         epipolar_threshold = 0.6
 
                         if cam_info['extrinsics']['epipolar_error'] > epipolar_threshold:
@@ -929,7 +990,7 @@ class Main:
                         if result_config['stereo_config']['left_cam'] == camera and result_config['stereo_config']['right_cam'] == cam_info['extrinsics']['to_cam']:
                             calibration_handler.setStereoLeft(stringToCam[camera], result_config['stereo_config']['rectification_left'])
                             calibration_handler.setStereoRight(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_right'])
-                        elif result_config['stereo_config']['left_cam'] == cam_info['extrinsics']['to_cam'] and result_config['stereo_config']['right_cam'] == camera:                           
+                        elif result_config['stereo_config']['left_cam'] == cam_info['extrinsics']['to_cam'] and result_config['stereo_config']['right_cam'] == camera:
                             calibration_handler.setStereoRight(stringToCam[camera], result_config['stereo_config']['rectification_right'])
                             calibration_handler.setStereoLeft(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_left'])
 
@@ -962,7 +1023,7 @@ class Main:
                         is_write_factory_sucessful = False
 
                 if is_write_succesful:
-                    
+
 
                     """ eepromUnionData = {}
                     calibHandler = self.device.readCalibration2()
@@ -981,7 +1042,7 @@ class Main:
                     cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
                     cv2.imshow("Result Image", resImage)
                     cv2.waitKey(0)
-                    
+
                 else:
                     self.device.close()
                     text = "EEPROM write Failed!!"
@@ -990,18 +1051,21 @@ class Main:
                     cv2.imshow("Result Image", resImage)
                     cv2.waitKey(0)
                     # return (False, "EEPROM write Failed!!")
-            
+
             else:
                 self.device.close()
                 print(error_text)
-                for text in error_text: 
-                # text = error_text[0]                
+                for text in error_text:
+                # text = error_text[0]
                     resImage = create_blank(900, 512, rgb_color=red)
                     cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
                     cv2.imshow("Result Image", resImage)
                     cv2.waitKey(0)
         except Exception as e:
+            self.device.close()
+            print('Device closed in exception..' )
             print(e)
+            print(traceback.format_exc())
             raise SystemExit(1)
 
     def run(self):
@@ -1012,7 +1076,7 @@ class Main:
                 for cam_id in self.board_config['cameras']:
                     name = self.board_config['cameras'][cam_id]['name']
                     Path("dataset/{}".format(name)).mkdir(parents=True, exist_ok=True)
-                
+
             except OSError:
                 traceback.print_exc()
                 print("An error occurred trying to create image dataset directories!")
