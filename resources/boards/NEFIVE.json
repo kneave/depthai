@@ -1,0 +1,53 @@
+{
+    "board_config": {
+        "name": "NEFIVE",
+        "revision": "R1M0E1",
+        "cameras": {
+            "CAM_A": {
+                "name": "rgb",
+                "hfov": 69,
+                "type": "color"
+            },
+            "CAM_B": {
+                "name": "left",
+                "hfov": 180,
+                "type": "color",
+                "extrinsics": {
+                    "to_cam": "CAM_C",
+                    "specTranslation": {
+                        "x": -5.8,
+                        "y": 0,
+                        "z": 0
+                    },
+                    "rotation": {
+                        "r": 0,
+                        "p": 0,
+                        "y": 0
+                    }
+                }
+            },
+            "CAM_C": {
+                "name": "right",
+                "hfov": 180,
+                "type": "color",
+                "extrinsics": {
+                    "to_cam": "CAM_A",
+                    "specTranslation": {
+                        "x": 2.9,
+                        "y": 0,
+                        "z": 0
+                    },
+                    "rotation": {
+                        "r": 0,
+                        "p": 0,
+                        "y": 0
+                    }
+                }
+            }
+        },
+        "stereo_config": {
+            "left_cam": "CAM_B",
+            "right_cam": "CAM_C"
+        }
+    }
+}
