@@ -47,7 +47,7 @@ camToMonoRes = {
                 }
 
 camToRgbRes = {
-                'IMX378' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
+                'IMX378' : dai.ColorCameraProperties.SensorResolution.THE_1080_P,
                 'IMX214' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
                 'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
@@ -491,18 +491,21 @@ class Main:
 
     def draw_corners(self, frame, displayframe, color):
         marker_corners, ids, charuco_corners, charuco_ids = self.detect_markers_corners(frame)
-        for corner in charuco_corners:
-            corner_int = (int(corner[0][0]), int(corner[0][1]))
-            cv2.circle(displayframe, corner_int, 8*displayframe.shape[1]//1900, color, -1)
-        height, width = displayframe.shape[:2]
-        start_point = (0, 0)  # top of the image
-        end_point = (0, height)
+        
+        if charuco_corners is not None:
+            for corner in charuco_corners:
+                corner_int = (int(corner[0][0]), int(corner[0][1]))
+                cv2.circle(displayframe, corner_int, 8*displayframe.shape[1]//1900, color, -1)
+            height, width = displayframe.shape[:2]
+            start_point = (0, 0)  # top of the image
+            end_point = (0, height)
 
-        color = (0, 0, 0)  # blue in BGR
-        thickness = 4
+            color = (0, 0, 0)  # blue in BGR
+            thickness = 4
 
-        # Draw the line on the image
-        cv2.line(displayframe, start_point, end_point, color, thickness)
+            # Draw the line on the image
+            cv2.line(displayframe, start_point, end_point, color, thickness)
+
         return displayframe
         # return cv2.aruco.drawDetectedCornersCharuco(displayframe, charuco_corners)
 
@@ -575,7 +578,7 @@ class Main:
 
 
     def parse_frame(self, frame, stream_name):
-        if not self.is_markers_found(frame):
+        if not self.is_markers_found(frame) and stream_name != "rgb":
             return False
 
         filename = calibUtils.image_filename(self.current_polygon, self.images_captured)
@@ -916,7 +919,9 @@ class Main:
                             frameMsg_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_GRAY2RGB)
                         if len(self.coverageImages[name].shape) != 3:
                             self.coverageImages[name] = cv2.cvtColor(self.coverageImages[name], cv2.COLOR_GRAY2RGB)
+                                         
                         self.coverageImages[name] = self.draw_corners(frameMsg_frame, self.coverageImages[name], color)
+                        
                     if not self.images_captured:
                         if 'stereo_config' in self.board_config['cameras']:
                             leftStereo =  self.board_config['cameras'][self.board_config['stereo_config']['left_cam']]['name']
