@@ -47,7 +47,7 @@ camToMonoRes = {
                 }
 
 camToRgbRes = {
-                'IMX378' : dai.ColorCameraProperties.SensorResolution.THE_1080_P,
+                'IMX378' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
                 'IMX214' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
                 'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
@@ -578,8 +578,8 @@ class Main:
 
 
     def parse_frame(self, frame, stream_name):
-        if not self.is_markers_found(frame) and stream_name != "rgb":
-            return False
+        # if not self.is_markers_found(frame) and stream_name != "rgb":
+        #     return False
 
         filename = calibUtils.image_filename(self.current_polygon, self.images_captured)
         path = Path(self.args.datasetPath) / stream_name / filename
@@ -1011,7 +1011,7 @@ class Main:
                         reprojection_error_threshold = reprojection_error_threshold * cam_info['size'][1] / 720
 
                     if cam_info['name'] == 'rgb':
-                        reprojection_error_threshold = 3
+                        reprojection_error_threshold = 5
                     print('Reprojection error threshold -> {}'.format(reprojection_error_threshold))
 
                     if cam_info['reprojection_error'] > reprojection_error_threshold:
