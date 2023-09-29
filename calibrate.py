@@ -47,7 +47,7 @@ camToMonoRes = {
                 }
 
 camToRgbRes = {
-                'IMX378' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
+                'IMX378' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
                 'IMX214' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
                 'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
@@ -119,7 +119,7 @@ def parse_args():
                         help="number of chessboard squares in X direction in charuco boards.")
     parser.add_argument("-ny", "--squaresY", default="8", type=int, required=False,
                         help="number of chessboard squares in Y direction in charuco boards.")
-    parser.add_argument("-rd", "--rectifiedDisp", default=True, action="store_false",
+    parser.add_argument("-rd", "--rectifiedDisp", default=False, action="store_false",
                         help="Display rectified images with lines drawn for epipolar check")
     parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*', type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
