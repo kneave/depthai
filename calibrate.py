@@ -1007,8 +1007,9 @@ class Main:
                     # log_list.append(self.ccm_selected[cam_info['name']])
                     reprojection_error_threshold = 1.0
                     if cam_info['size'][1] > 720:
-                        #print(cam_info['size'][1])
-                        reprojection_error_threshold = reprojection_error_threshold * cam_info['size'][1] / 720
+                        print(cam_info['size'][1])
+                        # reprojection_error_threshold = reprojection_error_threshold * cam_info['size'][1] / 720
+                        reprojection_error_threshold = 370
 
                     if cam_info['name'] == 'rgb':
                         reprojection_error_threshold = 5
