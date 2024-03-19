@@ -347,7 +347,7 @@ class OakCamera:
             fps (float): If monochrome cameras aren't already passed, create them and set specified FPS
             left (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
             right (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
-            encode (bool/str/Profile): Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use h264 codec.
+            encode (bool/str/Profile): Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use MJPEG.
         """
         if left is None:
             left = self.camera(source="left", resolution=resolution, fps=fps)
@@ -491,7 +491,7 @@ class OakCamera:
 
         for xlink_name in self._new_msg_callbacks:
             try:
-                self.device.getOutputQueue(xlink_name, maxSize=4, blocking=False).addCallback(self._new_oak_msg)
+                self.device.getOutputQueue(xlink_name, maxSize=1, blocking=False).addCallback(self._new_oak_msg)
             # TODO: make this nicer, have self._new_msg_callbacks know whether it's replay or not
             except Exception as e:
                 if self.replay:
